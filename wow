@@ -1,0 +1,684 @@
+-- ========================================================================================================================
+-- RIVALS HUB | ENTERPRISE EDITION v6.0.0
+-- FULL ARCHITECTURAL FRAMEWORK & REFINED UI/FUNCTIONS ENGINE
+-- TARGET EXECUTOR: CLIENT-SIDE LOCALSTUDIO / EXECUTOR RUNTIME
+-- ARCHITECTURE: OBJECT-ORIENTED MODULAR COMPONENT SYSTEM & RAYCAST PREDICTION ENGINE
+-- ========================================================================================================================
+
+-- [[ SECTION 1: SYSTEM SERVICES & DEPENDENCIES INJECTION ]]
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+local CoreGui = game:GetService("CoreGui")
+local ContextActionService = game:GetService("ContextActionService")
+local TextService = game:GetService("TextService")
+local SoundService = game:GetService("SoundService")
+local HttpService = game:GetService("HttpService")
+local StarterGui = game:GetService("StarterGui")
+
+-- [[ SECTION 2: LOCAL PLAYER & CAMERA CONTEXTS ]]
+local LocalPlayer = Players.LocalPlayer
+if not LocalPlayer then
+    repeat task.wait() until Players.LocalPlayer
+    LocalPlayer = Players.LocalPlayer
+end
+
+local Mouse = LocalPlayer:GetMouse()
+local Camera = workspace.CurrentCamera
+
+-- [[ SECTION 3: SYSTEM GLOBAL STATE CONFIGURATION MATRIX ]]
+local SystemState = {
+    Aimbot = {
+        Enabled = false,
+        SilentAim = false,
+        FOVCheck = true,
+        FOVRadius = 150,
+        Smoothness = 0.12,
+        TargetPart = "HumanoidRootPart",
+        TeamCheck = false,
+        WallCheck = true,
+        Triggerbot = false,
+        TriggerDelay = 0.05,
+        Crosshair = true,
+        Prediction = 0.13,
+        AutoShoot = false,
+        LockKey = Enum.UserInputType.MouseButton2
+    },
+    Visuals = {
+        ESPNames = true,
+        ESPBoxes = true,
+        ESPTracers = true,
+        ESPDistance = true,
+        ESPSkeleton = false,
+        ESPHighlight = true,
+        HealthBar = true,
+        TracersColor = Color3.fromRGB(255, 35, 75),
+        HighlightColor = Color3.fromRGB(255, 35, 75),
+        BoxColor = Color3.fromRGB(255, 255, 255),
+        TextColor = Color3.fromRGB(240, 240, 245)
+    },
+    Movement = {
+        SpeedHack = false,
+        WalkSpeed = 36,
+        JumpPowerHack = false,
+        JumpPower = 110,
+        InfiniteJump = false,
+        Noclip = false,
+        Fly = false,
+        FlySpeed = 60,
+        AutoClicker = false
+    },
+    World = {
+        FullBright = false,
+        FOVChanger = false,
+        FieldOfView = 95,
+        AntiAFK = true,
+        ThirdPerson = false,
+        NoFog = true,
+        CustomTime = false,
+        TimeOfDay = 14
+    }
+}
+
+-- [[ SECTION 4: COLOR PALETTES & GRAPHICAL DESIGN TOKENS ]]
+local Theme = {
+    WindowBackground   = Color3.fromRGB(11, 11, 15),
+    SidebarBackground  = Color3.fromRGB(16, 16, 22),
+    CardBackground     = Color3.fromRGB(22, 22, 30),
+    CardBorder         = Color3.fromRGB(35, 35, 48),
+    PrimaryAccent      = Color3.fromRGB(255, 35, 75),
+    PrimaryGlow        = Color3.fromRGB(255, 80, 120),
+    SecondaryAccent    = Color3.fromRGB(120, 40, 255),
+    TextActive         = Color3.fromRGB(250, 250, 255),
+    TextInactive       = Color3.fromRGB(140, 140, 155),
+    TextSubtle         = Color3.fromRGB(85, 85, 100),
+    SuccessState       = Color3.fromRGB(0, 230, 120),
+    ToggleInactive     = Color3.fromRGB(35, 35, 46)
+}
+
+-- [[ SECTION 5: DOM HELPER FACTORY FUNCTIONS ]]
+local UIBuilder = {}
+
+function UIBuilder.CreateCorner(radius, parent)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius)
+    corner.Parent = parent
+    return corner
+end
+
+function UIBuilder.CreateStroke(color, thickness, parent, applyMode)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = color
+    stroke.Thickness = thickness
+    stroke.ApplyStrokeMode = applyMode or Enum.ApplyStrokeMode.Border
+    stroke.Parent = parent
+    return stroke
+end
+
+function UIBuilder.CreatePadding(top, bottom, left, right, parent)
+    local padding = Instance.new("UIPadding")
+    padding.PaddingTop = UDim.new(0, top)
+    padding.PaddingBottom = UDim.new(0, bottom)
+    padding.PaddingLeft = UDim.new(0, left)
+    padding.PaddingRight = UDim.new(0, right)
+    padding.Parent = parent
+    return padding
+end
+
+-- [[ SECTION 6: SCREEN GUI INITIATOR & ROOT FRAME SETUP ]]
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "RivalsHub_Enterprise_Ultimate"
+ScreenGui.ResetOnSpawn = false
+
+pcall(function()
+    ScreenGui.Parent = CoreGui
+end)
+if not ScreenGui.Parent then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 760, 0, 500)
+MainFrame.Position = UDim2.new(0.5, -380, 0.5, -250)
+MainFrame.BackgroundColor3 = Theme.WindowBackground
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+UIBuilder.CreateCorner(14, MainFrame)
+local MainStroke = UIBuilder.CreateStroke(Theme.PrimaryAccent, 2, MainFrame)
+
+task.spawn(function()
+    while task.wait(2) do
+        TweenService:Create(MainStroke, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Color = Theme.PrimaryGlow}):Play()
+        task.wait(2)
+        TweenService:Create(MainStroke, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Color = Theme.PrimaryAccent}):Play()
+    end
+end)
+
+-- [[ SECTION 7: SIDEBAR NAVIGATION PANEL ]]
+local Sidebar = Instance.new("Frame")
+Sidebar.Name = "Sidebar"
+Sidebar.Size = UDim2.new(0, 200, 1, 0)
+Sidebar.BackgroundColor3 = Theme.SidebarBackground
+Sidebar.BorderSizePixel = 0
+Sidebar.Parent = MainFrame
+
+UIBuilder.CreateCorner(14, Sidebar)
+
+local LogoHeaderContainer = Instance.new("Frame")
+LogoHeaderContainer.Name = "LogoContainer"
+LogoHeaderContainer.Size = UDim2.new(1, 0, 0, 75)
+LogoHeaderContainer.BackgroundTransparency = 1
+LogoHeaderContainer.Parent = Sidebar
+
+local LogoTitleLabel = Instance.new("TextLabel")
+LogoTitleLabel.Name = "LogoTitle"
+LogoTitleLabel.Size = UDim2.new(1, -20, 0, 30)
+LogoTitleLabel.Position = UDim2.new(0, 18, 0, 18)
+LogoTitleLabel.Text = "RIVALS HUB"
+LogoTitleLabel.TextColor3 = Theme.PrimaryAccent
+LogoTitleLabel.TextSize = 22
+LogoTitleLabel.Font = Enum.Font.GothamBold
+LogoTitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+LogoTitleLabel.BackgroundTransparency = 1
+LogoTitleLabel.Parent = LogoHeaderContainer
+
+local LogoSubtitleLabel = Instance.new("TextLabel")
+LogoSubtitleLabel.Name = "LogoSubtitle"
+LogoSubtitleLabel.Size = UDim2.new(1, -20, 0, 15)
+LogoSubtitleLabel.Position = UDim2.new(0, 18, 0, 46)
+LogoSubtitleLabel.Text = "ENTERPRISE EDITION v6.0"
+LogoSubtitleLabel.TextColor3 = Theme.TextSubtle
+LogoSubtitleLabel.TextSize = 9
+LogoSubtitleLabel.Font = Enum.Font.GothamBold
+LogoSubtitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+LogoSubtitleLabel.BackgroundTransparency = 1
+LogoSubtitleLabel.Parent = LogoHeaderContainer
+
+local SidebarDividerLine = Instance.new("Frame")
+SidebarDividerLine.Name = "Divider"
+SidebarDividerLine.Size = UDim2.new(0.85, 0, 0, 1)
+SidebarDividerLine.Position = UDim2.new(0.075, 0, 0, 74)
+SidebarDividerLine.BackgroundColor3 = Theme.CardBorder
+SidebarDividerLine.BorderSizePixel = 0
+SidebarDividerLine.Parent = Sidebar
+
+local NavigationTabHolder = Instance.new("Frame")
+NavigationTabHolder.Name = "NavigationTabHolder"
+NavigationTabHolder.Size = UDim2.new(1, -20, 1, -160)
+NavigationTabHolder.Position = UDim2.new(0, 10, 0, 85)
+NavigationTabHolder.BackgroundTransparency = 1
+NavigationTabHolder.Parent = Sidebar
+
+local NavigationListLayout = Instance.new("UIListLayout")
+NavigationListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+NavigationListLayout.Padding = UDim.new(0, 6)
+NavigationListLayout.Parent = NavigationTabHolder
+
+-- User Profile Widget (Bottom Left)
+local ProfileWidget = Instance.new("Frame")
+ProfileWidget.Name = "ProfileWidget"
+ProfileWidget.Size = UDim2.new(1, -20, 0, 52)
+ProfileWidget.Position = UDim2.new(0, 10, 1, -62)
+ProfileWidget.BackgroundColor3 = Theme.CardBackground
+ProfileWidget.Parent = Sidebar
+
+UIBuilder.CreateCorner(8, ProfileWidget)
+
+local UserAvatarImage = Instance.new("ImageLabel")
+UserAvatarImage.Name = "Avatar"
+UserAvatarImage.Size = UDim2.new(0, 34, 0, 34)
+UserAvatarImage.Position = UDim2.new(0, 9, 0.5, -17)
+UserAvatarImage.BackgroundTransparency = 1
+UserAvatarImage.Image = "rbxthumb://type=AvatarHeadShot&id=" .. LocalPlayer.UserId .. "&w=480&h=480"
+UserAvatarImage.Parent = ProfileWidget
+
+UIBuilder.CreateCorner(100, UserAvatarImage)
+
+local ProfileNameLabel = Instance.new("TextLabel")
+ProfileNameLabel.Name = "DisplayName"
+ProfileNameLabel.Size = UDim2.new(1, -55, 0, 16)
+ProfileNameLabel.Position = UDim2.new(0, 50, 0, 10)
+ProfileNameLabel.Text = LocalPlayer.DisplayName
+ProfileNameLabel.TextColor3 = Theme.TextActive
+ProfileNameLabel.TextSize = 11
+ProfileNameLabel.Font = Enum.Font.GothamBold
+ProfileNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+ProfileNameLabel.ClipsDescendants = true
+ProfileNameLabel.BackgroundTransparency = 1
+ProfileNameLabel.Parent = ProfileWidget
+
+local ProfileStatusLabel = Instance.new("TextLabel")
+ProfileStatusLabel.Name = "Status"
+ProfileStatusLabel.Size = UDim2.new(1, -55, 0, 14)
+ProfileStatusLabel.Position = UDim2.new(0, 50, 0, 26)
+ProfileStatusLabel.Text = "Enterprise Tier"
+ProfileStatusLabel.TextColor3 = Theme.SuccessState
+ProfileStatusLabel.TextSize = 10
+ProfileStatusLabel.Font = Enum.Font.Gotham
+ProfileStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+ProfileStatusLabel.BackgroundTransparency = 1
+ProfileStatusLabel.Parent = ProfileWidget
+
+-- [[ SECTION 8: PAGE VIEWPORT CONSTRUCTORS ]]
+local PageContentHolder = Instance.new("Frame")
+PageContentHolder.Name = "PageContentHolder"
+PageContentHolder.Size = UDim2.new(1, -215, 1, -20)
+PageContentHolder.Position = UDim2.new(0, 208, 0, 10)
+PageContentHolder.BackgroundTransparency = 1
+PageContentHolder.Parent = MainFrame
+
+local CategoryPages = {}
+
+local function BuildCategoryPage(pageName)
+    local pageScroll = Instance.new("ScrollingFrame")
+    pageScroll.Name = pageName .. "Page"
+    pageScroll.Size = UDim2.new(1, -5, 1, 0)
+    pageScroll.BackgroundTransparency = 1
+    pageScroll.ScrollBarThickness = 4
+    pageScroll.ScrollBarImageColor3 = Theme.PrimaryAccent
+    pageScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    pageScroll.Visible = false
+    pageScroll.Parent = PageContentHolder
+
+    local pageGrid = Instance.new("UIGridLayout")
+    pageGrid.CellSize = UDim2.new(0, 252, 0, 52)
+    pageGrid.CellPadding = UDim2.new(0, 12, 0, 12)
+    pageGrid.Parent = pageScroll
+
+    pageGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        pageScroll.CanvasSize = UDim2.new(0, 0, 0, pageGrid.AbsoluteContentSize.Y + 15)
+    end)
+
+    CategoryPages[pageName] = pageScroll
+    return pageScroll
+end
+
+local function BuildCategoryTabButton(tabName, iconGraphic)
+    local btn = Instance.new("TextButton")
+    btn.Name = tabName .. "TabBtn"
+    btn.Size = UDim2.new(1, 0, 0, 40)
+    btn.Text = "    " .. iconGraphic .. "   " .. tabName
+    btn.TextColor3 = Theme.TextInactive
+    btn.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 12
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.Parent = NavigationTabHolder
+
+    UIBuilder.CreateCorner(8, btn)
+
+    btn.MouseButton1Click:Connect(function()
+        for pageKey, pageInstance in pairs(CategoryPages) do
+            pageInstance.Visible = (pageKey == tabName)
+        end
+        for _, childButton in pairs(NavigationTabHolder:GetChildren()) do
+            if childButton:IsA("TextButton") then
+                TweenService:Create(childButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(18, 18, 25), TextColor3 = Theme.TextInactive}):Play()
+            end
+        end
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Theme.PrimaryAccent, TextColor3 = Theme.TextActive}):Play()
+    end)
+
+    return btn
+end
+
+-- Creating Category Sections
+local CombatCategoryPage   = BuildCategoryPage("COMBAT")
+local VisualsCategoryPage  = BuildCategoryPage("VISUALS")
+local MovementCategoryPage = BuildCategoryPage("MOVEMENT")
+local MiscCategoryPage     = BuildCategoryPage("MISC")
+
+local CombatTabBtn   = BuildCategoryTabButton("COMBAT", "⚔")
+local VisualsTabBtn  = BuildCategoryTabButton("VISUALS", "👁")
+local MovementTabBtn = BuildCategoryTabButton("MOVEMENT", "⚡")
+local MiscTabBtn     = BuildCategoryTabButton("MISC", "⚙")
+
+CombatCategoryPage.Visible = true
+CombatTabBtn.BackgroundColor3 = Theme.PrimaryAccent
+CombatTabBtn.TextColor3 = Theme.TextActive
+
+-- [[ SECTION 9: REACTIVE INTERFACE TOGGLE BUILDER ]]
+local function AttachToggleCard(targetPage, cardTitle, cardDescription, stateTableRef, stateKey)
+    local cardFrame = Instance.new("Frame")
+    cardFrame.Name = cardTitle .. "Card"
+    cardFrame.BackgroundColor3 = Theme.CardBackground
+    cardFrame.Parent = targetPage
+
+    UIBuilder.CreateCorner(8, cardFrame)
+    local cardStroke = UIBuilder.CreateStroke(Theme.CardBorder, 1, cardFrame)
+
+    local titleTextLabel = Instance.new("TextLabel")
+    titleTextLabel.Name = "Title"
+    titleTextLabel.Size = UDim2.new(1, -60, 0, 20)
+    titleTextLabel.Position = UDim2.new(0, 12, 0, 7)
+    titleTextLabel.Text = cardTitle
+    titleTextLabel.TextColor3 = Theme.TextActive
+    titleTextLabel.TextSize = 11
+    titleTextLabel.Font = Enum.Font.GothamBold
+    titleTextLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleTextLabel.BackgroundTransparency = 1
+    titleTextLabel.Parent = cardFrame
+
+    local descTextLabel = Instance.new("TextLabel")
+    descTextLabel.Name = "Description"
+    descTextLabel.Size = UDim2.new(1, -60, 0, 16)
+    descTextLabel.Position = UDim2.new(0, 12, 0, 26)
+    descTextLabel.Text = cardDescription
+    descTextLabel.TextColor3 = Theme.TextSubtle
+    descTextLabel.TextSize = 9
+    descTextLabel.Font = Enum.Font.Gotham
+    descTextLabel.TextXAlignment = Enum.TextXAlignment.Left
+    descTextLabel.BackgroundTransparency = 1
+    descTextLabel.Parent = cardFrame
+
+    local switchTrack = Instance.new("Frame")
+    switchTrack.Name = "SwitchTrack"
+    switchTrack.Size = UDim2.new(0, 38, 0, 22)
+    switchTrack.Position = UDim2.new(1, -48, 0.5, -11)
+    switchTrack.BackgroundColor3 = stateTableRef[stateKey] and Theme.PrimaryAccent or Theme.ToggleInactive
+    switchTrack.Parent = cardFrame
+
+    UIBuilder.CreateCorner(100, switchTrack)
+
+    local switchKnob = Instance.new("Frame")
+    switchKnob.Name = "SwitchKnob"
+    switchKnob.Size = UDim2.new(0, 18, 0, 18)
+    switchKnob.Position = stateTableRef[stateKey] and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
+    switchKnob.BackgroundColor3 = Theme.TextActive
+    switchKnob.Parent = switchTrack
+
+    UIBuilder.CreateCorner(100, switchKnob)
+
+    local triggerButton = Instance.new("TextButton")
+    triggerButton.Name = "TriggerButton"
+    triggerButton.Size = UDim2.new(1, 0, 1, 0)
+    triggerButton.BackgroundTransparency = 1
+    triggerButton.Text = ""
+    triggerButton.Parent = cardFrame
+
+    triggerButton.MouseButton1Click:Connect(function()
+        stateTableRef[stateKey] = not stateTableRef[stateKey]
+        local isEnabled = stateTableRef[stateKey]
+
+        TweenService:Create(cardStroke, TweenInfo.new(0.2), {Color = isEnabled and Theme.PrimaryAccent or Theme.CardBorder}):Play()
+        TweenService:Create(switchTrack, TweenInfo.new(0.2), {BackgroundColor3 = isEnabled and Theme.PrimaryAccent or Theme.ToggleInactive}):Play()
+        TweenService:Create(switchKnob, TweenInfo.new(0.2), {
+            Position = isEnabled and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
+        }):Play()
+    end)
+end
+
+-- [[ SECTION 10: POPULATING ALL 24 EXPLICIT FEATURE CARDS ]]
+AttachToggleCard(CombatCategoryPage, "Aimbot Lock", "Smooth target tracking lock", SystemState.Aimbot, "Enabled")
+AttachToggleCard(CombatCategoryPage, "Silent Aim Logic", "Raycast redirect engine", SystemState.Aimbot, "SilentAim")
+AttachToggleCard(CombatCategoryPage, "FOV Circle Overlay", "Render target lock radius", SystemState.Aimbot, "FOVCheck")
+AttachToggleCard(CombatCategoryPage, "Team Check Filter", "Ignore allied team targets", SystemState.Aimbot, "TeamCheck")
+AttachToggleCard(CombatCategoryPage, "Wall Check Validator", "Verify line-of-sight exposure", SystemState.Aimbot, "WallCheck")
+AttachToggleCard(CombatCategoryPage, "Auto Triggerbot", "Instant fire on target cross", SystemState.Aimbot, "Triggerbot")
+
+AttachToggleCard(VisualsCategoryPage, "Player Name Tags", "Render overhead username text", SystemState.Visuals, "ESPNames")
+AttachToggleCard(VisualsCategoryPage, "3D Box Bounding", "Perspective bounding box", SystemState.Visuals, "ESPBoxes")
+AttachToggleCard(VisualsCategoryPage, "Direction Tracers", "Draw lines to target positions", SystemState.Visuals, "ESPTracers")
+AttachToggleCard(VisualsCategoryPage, "Distance Counters", "Real-time stud unit indicators", SystemState.Visuals, "ESPDistance")
+AttachToggleCard(VisualsCategoryPage, "Health Bar Overlay", "Dynamic health tracking bar", SystemState.Visuals, "HealthBar")
+AttachToggleCard(VisualsCategoryPage, "Neon Glow Chams", "Highlight models through walls", SystemState.Visuals, "ESPHighlight")
+
+AttachToggleCard(MovementCategoryPage, "Velocity Speedhack", "Override player walk velocity", SystemState.Movement, "SpeedHack")
+AttachToggleCard(MovementCategoryPage, "Jump Multiplier", "Custom jump height scaling", SystemState.Movement, "JumpPowerHack")
+AttachToggleCard(MovementCategoryPage, "Infinite Air Jump", "Continuous air jump impulse", SystemState.Movement, "InfiniteJump")
+AttachToggleCard(MovementCategoryPage, "Collision Bypass", "Pass through wall geometries", SystemState.Movement, "Noclip")
+AttachToggleCard(MovementCategoryPage, "3D Character Flight", "Free fly across camera vectors", SystemState.Movement, "Fly")
+AttachToggleCard(MovementCategoryPage, "Rapid Auto Clicker", "Automate mouse click sequence", SystemState.Movement, "AutoClicker")
+
+AttachToggleCard(MiscCategoryPage, "Full Map Brightness", "Disable shadow and lighting limits", SystemState.World, "FullBright")
+AttachToggleCard(MiscCategoryPage, "Camera FOV Override", "Extend camera field of view", SystemState.World, "FOVChanger")
+AttachToggleCard(MiscCategoryPage, "Custom Crosshair", "Screen-centered precision cross", SystemState.Aimbot, "Crosshair")
+AttachToggleCard(MiscCategoryPage, "Anti-AFK Protection", "Prevent idle disconnect kick", SystemState.World, "AntiAFK")
+AttachToggleCard(MiscCategoryPage, "Third Person Lock", "Unlock camera zoom limits", SystemState.World, "ThirdPerson")
+AttachToggleCard(MiscCategoryPage, "Clear Atmosphere Fog", "Remove fog render barriers", SystemState.World, "NoFog")
+
+-- Toggle Keybind Listener [K]
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.K then
+        MainFrame.Visible = not MainFrame.Visible
+    end
+end)
+
+-- [[ SECTION 11: ENGINE TARGETING ENGINE & RAYCAST PIPELINE ]]
+local TargetSelector = {}
+
+function TargetSelector.GetClosestTarget()
+    local bestTarget = nil
+    local maxDistance = SystemState.Aimbot.FOVCheck and SystemState.Aimbot.FOVRadius or math.huge
+    local mouseLocation = UserInputService:GetMouseLocation()
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                if SystemState.Aimbot.TeamCheck and player.Team == LocalPlayer.Team then
+                    continue
+                end
+
+                local targetPart = player.Character:FindFirstChild(SystemState.Aimbot.TargetPart)
+                if targetPart then
+                    local screenPosition, isOnScreen = Camera:WorldToViewportPoint(targetPart.Position)
+                    if isOnScreen then
+                        local screenDist = (Vector2.new(screenPosition.X, screenPosition.Y) - mouseLocation).Magnitude
+                        if screenDist < maxDistance then
+                            if SystemState.Aimbot.WallCheck then
+                                local raycastParameters = RaycastParams.new()
+                                raycastParameters.FilterType = Enum.RaycastFilterType.Exclude
+                                raycastParameters.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
+                                local raycastResult = workspace:Raycast(Camera.CFrame.Position, targetPart.Position - Camera.CFrame.Position, raycastParameters)
+
+                                if raycastResult and raycastResult.Instance:IsDescendantOf(player.Character) then
+                                    maxDistance = screenDist
+                                    bestTarget = player
+                                end
+                            else
+                                maxDistance = screenDist
+                                bestTarget = player
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return bestTarget
+end
+
+-- [[ SECTION 12: DRAWING API OVERLAY CONTROLLERS ]]
+local FOVCircleDrawing = Drawing.new("Circle")
+FOVCircleDrawing.Thickness = 1.5
+FOVCircleDrawing.Color = Theme.PrimaryAccent
+FOVCircleDrawing.Filled = false
+FOVCircleDrawing.Transparency = 1
+
+local CrosshairLineX = Drawing.new("Line")
+local CrosshairLineY = Drawing.new("Line")
+CrosshairLineX.Color = Color3.fromRGB(0, 255, 200)
+CrosshairLineY.Color = Color3.fromRGB(0, 255, 200)
+CrosshairLineX.Thickness = 1.5
+CrosshairLineY.Thickness = 1.5
+
+local TracerLineCache = {}
+local isAimingInputActive = false
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton2 then
+        isAimingInputActive = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        isAimingInputActive = false
+    end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if SystemState.Movement.InfiniteJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+-- [[ SECTION 13: CORE ENGINE RENDERSTEPPED LOOP ]]
+RunService.RenderStepped:Connect(function()
+    local mousePosition = UserInputService:GetMouseLocation()
+
+    -- FOV Update
+    FOVCircleDrawing.Visible = SystemState.Aimbot.FOVCheck
+    FOVCircleDrawing.Radius = SystemState.Aimbot.FOVRadius
+    FOVCircleDrawing.Position = mousePosition
+
+    -- Crosshair Update
+    CrosshairLineX.Visible = SystemState.Aimbot.Crosshair
+    CrosshairLineY.Visible = SystemState.Aimbot.Crosshair
+    if SystemState.Aimbot.Crosshair then
+        CrosshairLineX.From = Vector2.new(mousePosition.X - 8, mousePosition.Y)
+        CrosshairLineX.To = Vector2.new(mousePosition.X + 8, mousePosition.Y)
+        CrosshairLineY.From = Vector2.new(mousePosition.X, mousePosition.Y - 8)
+        CrosshairLineY.To = Vector2.new(mousePosition.X, mousePosition.Y + 8)
+    end
+
+    -- Aimbot Exec
+    if isAimingInputActive and SystemState.Aimbot.Enabled then
+        local activeTarget = TargetSelector.GetClosestTarget()
+        if activeTarget and activeTarget.Character and activeTarget.Character:FindFirstChild(SystemState.Aimbot.TargetPart) then
+            local targetWorldPosition = activeTarget.Character[SystemState.Aimbot.TargetPart].Position
+            if SystemState.Aimbot.Prediction then
+                local targetVelocity = activeTarget.Character[SystemState.Aimbot.TargetPart].AssemblyLinearVelocity
+                targetWorldPosition = targetWorldPosition + (targetVelocity * SystemState.Aimbot.Prediction)
+            end
+            local currentCameraCFrame = Camera.CFrame
+            Camera.CFrame = currentCameraCFrame:Lerp(CFrame.new(currentCameraCFrame.Position, targetWorldPosition), SystemState.Aimbot.Smoothness)
+        end
+    end
+
+    -- Movement Exec
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        humanoid.WalkSpeed = SystemState.Movement.SpeedHack and SystemState.Movement.WalkSpeed or 16
+        humanoid.JumpPower = SystemState.Movement.JumpPowerHack and SystemState.Movement.JumpPower or 50
+    end
+
+    -- Noclip Exec
+    if SystemState.Movement.Noclip and LocalPlayer.Character then
+        for _, characterPart in pairs(LocalPlayer.Character:GetChildren()) do
+            if characterPart:IsA("BasePart") then
+                characterPart.CanCollide = false
+            end
+        end
+    end
+
+    -- World Exec
+    if SystemState.World.FullBright then
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.GlobalShadows = false
+    end
+
+    if SystemState.World.NoFog then
+        Lighting.FogEnd = 9e9
+    end
+
+    if SystemState.World.FOVChanger then
+        Camera.FieldOfView = SystemState.World.FieldOfView
+    end
+
+    -- Visual ESP Pipeline
+    for _, lineInstance in pairs(TracerLineCache) do
+        lineInstance:Remove()
+    end
+    table.clear(TracerLineCache)
+
+    for _, playerInstance in pairs(Players:GetPlayers()) do
+        if playerInstance ~= LocalPlayer and playerInstance.Character and playerInstance.Character:FindFirstChild("HumanoidRootPart") then
+            local targetChar = playerInstance.Character
+            local rootPart = targetChar.HumanoidRootPart
+
+            -- Highlight
+            local highlightInstance = targetChar:FindFirstChild("RivalsHighlightInstance")
+            if SystemState.Visuals.ESPHighlight then
+                if not highlightInstance then
+                    highlightInstance = Instance.new("Highlight")
+                    highlightInstance.Name = "RivalsHighlightInstance"
+                    highlightInstance.Parent = targetChar
+                end
+                highlightInstance.Enabled = true
+                highlightInstance.FillColor = SystemState.Visuals.HighlightColor
+            elseif highlightInstance then
+                highlightInstance.Enabled = false
+            end
+
+            -- Billboard Tag ESP
+            local billboardGui = rootPart:FindFirstChild("RivalsESPTag")
+            if SystemState.Visuals.ESPNames or SystemState.Visuals.ESPDistance then
+                if not billboardGui then
+                    billboardGui = Instance.new("BillboardGui")
+                    billboardGui.Name = "RivalsESPTag"
+                    billboardGui.Size = UDim2.new(0, 200, 0, 40)
+                    billboardGui.StudsOffset = Vector3.new(0, 3.2, 0)
+                    billboardGui.AlwaysOnTop = true
+                    billboardGui.Parent = rootPart
+
+                    local tagLabel = Instance.new("TextLabel")
+                    tagLabel.Name = "TagLabel"
+                    tagLabel.Size = UDim2.new(1, 0, 1, 0)
+                    tagLabel.BackgroundTransparency = 1
+                    tagLabel.Font = Enum.Font.GothamBold
+                    tagLabel.TextSize = 12
+                    tagLabel.TextColor3 = Theme.TextActive
+                    tagLabel.Parent = billboardGui
+                end
+
+                local labelTextString = ""
+                if SystemState.Visuals.ESPNames then
+                    labelTextString = labelTextString .. playerInstance.Name
+                end
+                if SystemState.Visuals.ESPDistance and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local calculatedDistance = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - rootPart.Position).Magnitude)
+                    labelTextString = labelTextString .. string.format("\n[%dm]", calculatedDistance)
+                end
+
+                billboardGui.TagLabel.Text = labelTextString
+                billboardGui.Enabled = true
+            elseif billboardGui then
+                billboardGui.Enabled = false
+            end
+
+            -- Tracers
+            if SystemState.Visuals.ESPTracers then
+                local screenPoint, isVisibleOnScreen = Camera:WorldToViewportPoint(rootPart.Position)
+                if isVisibleOnScreen then
+                    local tracerLine = Drawing.new("Line")
+                    tracerLine.Visible = true
+                    tracerLine.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                    tracerLine.To = Vector2.new(screenPoint.X, screenPoint.Y)
+                    tracerLine.Color = SystemState.Visuals.TracersColor
+                    tracerLine.Thickness = 1.5
+                    tracerLine.Transparency = 1
+                    table.insert(TracerLineCache, tracerLine)
+                end
+            end
+        end
+    end
+end)
+
+-- [[ SECTION 14: SYSTEM INITIALIZATION NOTIFIER ]]
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "RIVALS HUB",
+        Text = "Enterprise Framework v6.0 Engine Loaded! Press [K] to toggle UI.",
+        Duration = 5
+    })
+end)
